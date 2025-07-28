@@ -1,0 +1,47 @@
+{
+  "name": "n8n-nodes-tela",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "n8n": {
+    "nodes": [
+      {
+        "name": "Tela",
+        "type": "n8n-nodes-tela.Tela",
+        "file": "dist/Tela.node.js",
+        "icon": "file:tela.png"
+      }
+    ],
+    "credentials": [
+      {
+        "name": "telaApi",
+        "type": "n8n-nodes-tela.TelaApi",
+        "file": "dist/credentials.js"
+      }
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "n8n-core": "^1.14.1",
+    "n8n-workflow": "^1.82.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "resolutions": {
+    "@azure/storage-blob": {
+      "module": "./dist/index.js"
+    }
+  }
+}
