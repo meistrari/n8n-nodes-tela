@@ -19,8 +19,9 @@
     "credentials": [
       {
         "name": "telaApi",
-        "type": "n8n-nodes-tela.TelaApi",
-        "file": "dist/credentials.js"
+        "type": "n8n-nodes-tela.Tela",
+        "file": "dist/Tela.credentials.js",
+        "icon": "file:tela.png"
       }
     ]
   },

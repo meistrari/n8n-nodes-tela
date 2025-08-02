@@ -1,15 +1,5 @@
-import { Tela } from "./Tela.node";
-import { TelaApi } from "./credentials";
+import { Tela } from "./Tela.credentials";
+import { Tela as TelaNode } from "./Tela.node";
 
-export const nodes = [new Tela()];
-
-export const credentials = [new TelaApi()];
-
-// Export classes with proper naming for n8n
-export const TelaNode = Tela;
-export const TelaApiCredential = TelaApi;
-
-export default {
-  nodes,
-  credentials,
-};
+export const nodes = [TelaNode];
+export const credentials = [Tela];
