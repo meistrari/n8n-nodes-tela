@@ -132,14 +132,7 @@ export class Tela implements INodeType {
   methods = {
     loadOptions: {
       async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-        const nodeStatic = this.getWorkflowStaticData('node') as any;
         const credentials = await this.getCredentials('telaApi')
-
-        // Check if we already have cached projects
-        if (nodeStatic.projects && Array.isArray(nodeStatic.projects) && nodeStatic.lastApiKey === credentials.apiKey) {
-          return nodeStatic.projects;
-        }
-
         const apiService = new TelaApiService(credentials.apiKey as string);
 
         try {
@@ -148,10 +141,6 @@ export class Tela implements INodeType {
             name: project.title,
             value: project.id,
           }));
-
-          // Cache the projects for future use
-          nodeStatic.projects = projectOptions;
-          nodeStatic.lastApiKey = credentials.apiKey as string;
 
           return projectOptions;
         } catch (error) {
@@ -165,15 +154,6 @@ export class Tela implements INodeType {
           return [];
         }
 
-        const nodeStatic = this.getWorkflowStaticData('node') as any;
-
-        // Check if we already have cached canvases for this project
-        if (nodeStatic.canvases &&
-          nodeStatic.lastProjectId === projectId &&
-          Array.isArray(nodeStatic.canvases)) {
-          return nodeStatic.canvases;
-        }
-
         const credentials = await this.getCredentials('telaApi')
         const apiService = new TelaApiService(credentials.apiKey as string);
 
@@ -183,10 +163,6 @@ export class Tela implements INodeType {
             name: prompt.title,
             value: prompt.id,
           }));
-
-          // Cache the canvases for this project
-          nodeStatic.canvases = canvasOptions;
-          nodeStatic.lastProjectId = projectId;
 
           return canvasOptions;
         } catch (error) {
@@ -201,25 +177,6 @@ export class Tela implements INodeType {
           return [];
         }
 
-        const nodeStatic = this.getWorkflowStaticData('node') as any;
-
-        // Check if we already have cached variables for this canvas
-        if (nodeStatic.canvasVariables &&
-          nodeStatic.lastCanvasId === canvasId &&
-          Array.isArray(nodeStatic.canvasVariables)) {
-          // Return cached variable options
-          return nodeStatic.canvasVariables.map((variable: any) => {
-            const requiredInfo = variable.required ? ' (required)' : '';
-
-            return {
-              name: `${variable.name} ${requiredInfo}`,
-              value: variable.name,
-              type: variable.type === 'file' ? 'file' : 'text',
-              description: variable.description || `${variable.type} variable`,
-            };
-          });
-        }
-
         const credentials = await this.getCredentials('telaApi')
         const apiService = new TelaApiService(credentials.apiKey as string);
 
@@ -227,10 +184,6 @@ export class Tela implements INodeType {
           const prompts = await apiService.getPrompts(projectId);
           const prompt = prompts.find(p => p.id === canvasId);
           const variables = prompt?.lastVersion?.variables || [];
-
-          // Store variables in workflow static data for execution use
-          nodeStatic.canvasVariables = variables;
-          nodeStatic.lastCanvasId = canvasId;
 
           return variables.map(variable => {
             const requiredInfo = variable.required ? ' (required)' : '';
@@ -257,18 +210,9 @@ export class Tela implements INodeType {
     const apiService = new TelaApiService(credentials.apiKey as string);
 
     try {
-      // Get variable definitions from static data
-      const nodeStatic = this.getWorkflowStaticData('node') as any;
-      let canvasVariables = nodeStatic.canvasVariables || [];
-
-      // If we don't have cached variables or canvas changed, fetch them
-      if (!canvasVariables.length || nodeStatic.lastCanvasId !== canvasId) {
-        const prompts = await apiService.getPrompts(projectId);
-        const prompt = prompts.find(p => p.id === canvasId);
-        canvasVariables = prompt?.lastVersion?.variables || [];
-        nodeStatic.canvasVariables = canvasVariables;
-        nodeStatic.lastCanvasId = canvasId;
-      }
+      const prompts = await apiService.getPrompts(projectId);
+      const prompt = prompts.find(p => p.id === canvasId);
+      const canvasVariables = prompt?.lastVersion?.variables || [];
 
       // Process variables from the fixedCollection
       const processedVariables: Record<string, any> = {};
@@ -352,8 +296,6 @@ export class Tela implements INodeType {
           }
         }
       }
-
-      console.log(processedVariables)
 
       const data = await apiService.createCompletion({
         canvas_id: canvasId,
