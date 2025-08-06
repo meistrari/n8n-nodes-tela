@@ -1,13 +1,16 @@
 {
   "name": "n8n-nodes-tela",
   "version": "1.0.0",
+  "description": "n8n community node for Tela API integration. Allows you to interact with Tela projects and canvases in your n8n workflows.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
   },
   "n8n": {
+    "n8nNodesApiVersion": 1,
     "nodes": [
       {
         "name": "Tela",
@@ -19,30 +22,45 @@
     "credentials": [
       {
         "name": "telaApi",
-        "type": "n8n-nodes-tela.Tela",
+        "type": "n8n-nodes-tela.telaApi",
         "file": "dist/Tela.credentials.js",
         "icon": "file:tela.png"
       }
     ]
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "n8n-core": "^1.14.1",
-    "n8n-workflow": "^1.82.0"
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "tela",
+    "api",
+    "integration",
+    "workflow",
+    "automation"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meistrari/n8n-nodes-tela.git"
+  },
+  "homepage": "https://github.com/meistrari/n8n-nodes-tela#readme",
+  "bugs": {
+    "url": "https://github.com/meistrari/n8n-nodes-tela/issues"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
-    "typescript": "^5.8.3"
+    "@types/node": "^18.0.0",
+    "typescript": "^4.8.0",
+    "n8n-workflow": "^1.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
-  },
-  "resolutions": {
-    "@azure/storage-blob": {
-      "module": "./dist/index.js"
-    }
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
