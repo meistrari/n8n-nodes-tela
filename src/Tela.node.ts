@@ -17,7 +17,7 @@ export class Tela implements INodeType {
     icon: 'file:tela.png',
     group: ['transform'],
     version: 1,
-    description: 'Interage com a API Tela',
+    description: 'Dynamic Tela API integration with auto-generated variable fields',
     defaults: {
       name: 'Tela',
       color: '#772244',
@@ -68,10 +68,13 @@ export class Tela implements INodeType {
       {
         displayName: 'Variables',
         name: 'variables',
-        type: 'collection',
+        type: 'fixedCollection',
+        typeOptions: {
+          multipleValues: true,
+        },
         placeholder: 'Add Variable',
-        default: {},
-        description: 'Canvas variables - these will be populated dynamically based on the selected canvas',
+        default: [],
+        description: 'Canvas variables - automatically populated based on selected canvas',
         displayOptions: {
           show: {
             canvasId: [
@@ -85,63 +88,41 @@ export class Tela implements INodeType {
         },
         options: [
           {
-            displayName: 'Variable Name',
-            name: 'name',
-            type: 'options',
-            typeOptions: {
-              loadOptionsDependsOn: ['canvasId'],
-              loadOptionsMethod: 'getVariables',
-            },
-            default: '',
-            description: 'Select the variable to set',
-          },
-          {
-            displayName: 'Input Type',
-            name: 'inputType',
-            type: 'options',
-            options: [
-              { name: 'Text', value: 'text' },
-              { name: 'JSON', value: 'json' },
-              { name: 'File', value: 'file' },
+            name: 'variableValues',
+            displayName: 'Variable Value',
+            values: [
+              {
+                displayName: 'Variable',
+                name: 'name',
+                type: 'options',
+                typeOptions: {
+                  loadOptionsDependsOn: ['canvasId'],
+                  loadOptionsMethod: 'getCanvasVariables',
+                },
+                default: '',
+                required: true,
+                description: 'Select the variable to set',
+              },
+              {
+                displayName: 'Value',
+                name: 'value',
+                type: 'string',
+                default: '',
+                description: 'The value for this variable',
+                displayOptions: {
+                  show: {
+                    name: [
+                      {
+                        _cnd: {
+                          exists: true,
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+
             ],
-            default: 'text',
-            description: 'How to interpret the input value',
-          },
-          {
-            displayName: 'Value',
-            name: 'value',
-            type: 'string',
-            default: '',
-            description: 'The variable value',
-            displayOptions: {
-              show: {
-                inputType: ['text'],
-              },
-            },
-          },
-          {
-            displayName: 'JSON Value',
-            name: 'value',
-            type: 'json',
-            default: '{}',
-            description: 'The variable value as JSON',
-            displayOptions: {
-              show: {
-                inputType: ['json'],
-              },
-            },
-          },
-          {
-            displayName: 'File Path/Data',
-            name: 'value',
-            type: 'string',
-            default: '',
-            description: 'File path or binary data for file variables',
-            displayOptions: {
-              show: {
-                inputType: ['file'],
-              },
-            },
           },
         ],
       },
@@ -151,15 +132,28 @@ export class Tela implements INodeType {
   methods = {
     loadOptions: {
       async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+        const nodeStatic = this.getWorkflowStaticData('node') as any;
         const credentials = await this.getCredentials('telaApi')
+
+        // Check if we already have cached projects
+        if (nodeStatic.projects && Array.isArray(nodeStatic.projects) && nodeStatic.lastApiKey === credentials.apiKey) {
+          return nodeStatic.projects;
+        }
+
         const apiService = new TelaApiService(credentials.apiKey as string);
 
         try {
           const projects = await apiService.getProjects();
-          return projects.map(project => ({
+          const projectOptions = projects.map(project => ({
             name: project.title,
             value: project.id,
           }));
+
+          // Cache the projects for future use
+          nodeStatic.projects = projectOptions;
+          nodeStatic.lastApiKey = credentials.apiKey as string;
+
+          return projectOptions;
         } catch (error) {
           throw new Error(`Failed to load projects: ${error}`);
         }
@@ -171,39 +165,85 @@ export class Tela implements INodeType {
           return [];
         }
 
+        const nodeStatic = this.getWorkflowStaticData('node') as any;
+
+        // Check if we already have cached canvases for this project
+        if (nodeStatic.canvases &&
+          nodeStatic.lastProjectId === projectId &&
+          Array.isArray(nodeStatic.canvases)) {
+          return nodeStatic.canvases;
+        }
+
         const credentials = await this.getCredentials('telaApi')
         const apiService = new TelaApiService(credentials.apiKey as string);
 
         try {
           const prompts = await apiService.getPrompts(projectId);
-          return prompts.map(prompt => ({
+          const canvasOptions = prompts.map(prompt => ({
             name: prompt.title,
             value: prompt.id,
           }));
+
+          // Cache the canvases for this project
+          nodeStatic.canvases = canvasOptions;
+          nodeStatic.lastProjectId = projectId;
+
+          return canvasOptions;
         } catch (error) {
           throw new Error(`Failed to load canvases: ${error}`);
         }
       },
 
-      async getVariables(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+      async getCanvasVariables(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
         const canvasId = this.getCurrentNodeParameter('canvasId') as string;
-        if (!canvasId) {
+        const projectId = this.getCurrentNodeParameter('projectId') as string;
+        if (!canvasId || !projectId) {
           return [];
+        }
+
+        const nodeStatic = this.getWorkflowStaticData('node') as any;
+
+        // Check if we already have cached variables for this canvas
+        if (nodeStatic.canvasVariables &&
+          nodeStatic.lastCanvasId === canvasId &&
+          Array.isArray(nodeStatic.canvasVariables)) {
+          // Return cached variable options
+          return nodeStatic.canvasVariables.map((variable: any) => {
+            const requiredInfo = variable.required ? ' (required)' : '';
+
+            return {
+              name: `${variable.name} ${requiredInfo}`,
+              value: variable.name,
+              type: variable.type === 'file' ? 'file' : 'text',
+              description: variable.description || `${variable.type} variable`,
+            };
+          });
         }
 
         const credentials = await this.getCredentials('telaApi')
         const apiService = new TelaApiService(credentials.apiKey as string);
 
         try {
-          const prompt = await apiService.getPromptById(canvasId);
-          const variables = prompt.lastVersion.variables || [];
+          const prompts = await apiService.getPrompts(projectId);
+          const prompt = prompts.find(p => p.id === canvasId);
+          const variables = prompt?.lastVersion?.variables || [];
 
-          return variables.map(variable => ({
-            name: `${variable.name} (${variable.type}${variable.required ? ', required' : ''})`,
-            value: variable.name,
-          }));
+          // Store variables in workflow static data for execution use
+          nodeStatic.canvasVariables = variables;
+          nodeStatic.lastCanvasId = canvasId;
+
+          return variables.map(variable => {
+            const requiredInfo = variable.required ? ' (required)' : '';
+
+            return {
+              name: `${variable.name} ${requiredInfo}`,
+              value: variable.name,
+              type: variable.type === 'file' ? 'file' : 'text',
+              description: variable.description || `${variable.type} variable`,
+            };
+          });
         } catch (error) {
-          throw new Error(`Failed to load variables: ${error}`);
+          throw new Error(`Failed to load canvas variables: ${error}`);
         }
       },
     },
@@ -211,48 +251,117 @@ export class Tela implements INodeType {
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const canvasId = this.getNodeParameter('canvasId', 0) as string;
+    const projectId = this.getNodeParameter('projectId', 0) as string;
     const variablesCollection = this.getNodeParameter('variables', 0) as any;
     const credentials = await this.getCredentials('telaApi')
     const apiService = new TelaApiService(credentials.apiKey as string);
 
     try {
-      // Process variables based on their input types
+      // Get variable definitions from static data
+      const nodeStatic = this.getWorkflowStaticData('node') as any;
+      let canvasVariables = nodeStatic.canvasVariables || [];
+
+      // If we don't have cached variables or canvas changed, fetch them
+      if (!canvasVariables.length || nodeStatic.lastCanvasId !== canvasId) {
+        const prompts = await apiService.getPrompts(projectId);
+        const prompt = prompts.find(p => p.id === canvasId);
+        canvasVariables = prompt?.lastVersion?.variables || [];
+        nodeStatic.canvasVariables = canvasVariables;
+        nodeStatic.lastCanvasId = canvasId;
+      }
+
+      // Process variables from the fixedCollection
       const processedVariables: Record<string, any> = {};
 
-      if (variablesCollection && typeof variablesCollection === 'object') {
-        for (const [key, varConfig] of Object.entries(variablesCollection)) {
-          const config = varConfig as { name: string; inputType: string; value: any };
+      if (variablesCollection?.variableValues && Array.isArray(variablesCollection.variableValues)) {
+        for (const variableValue of variablesCollection.variableValues) {
+          const { name, value } = variableValue;
 
-          if (config.name && config.value !== undefined) {
-            switch (config.inputType) {
-              case 'text':
-                processedVariables[config.name] = String(config.value);
-                break;
-              case 'json':
-                if (typeof config.value === 'string') {
-                  // Convert JSON string format for Tela API
-                  processedVariables[config.name] = config.value.replace(/"/g, "'");
-                } else {
-                  processedVariables[config.name] = JSON.stringify(config.value).replace(/"/g, "'");
+          if (name && value !== undefined && value !== '') {
+            // Find the variable definition to determine how to process the value
+            const variableDefinition = canvasVariables.find((v: any) => v.name === name);
+
+            if (variableDefinition?.type === 'file') {
+              // Handle file upload
+              try {
+                // Get input data to access binary data
+                const items = this.getInputData();
+                const item = items[0]; // Get the first item
+
+                // Fallback strategy to extract binary data
+                let binaryData = null;
+                let fileName = 'file';
+                let mimeType = 'application/octet-stream';
+
+                // Strategy 1: Direct binary property name (e.g., "image")
+                if (typeof value === 'string' && item.binary && item.binary[value]) {
+                  binaryData = item.binary[value];
+                  fileName = binaryData.fileName || fileName;
+                  mimeType = binaryData.mimeType || mimeType;
                 }
-                break;
-              case 'file':
-                // For now, treat file as string - Phase 4 will implement actual file upload
-                processedVariables[config.name] = String(config.value);
-                break;
-              default:
-                processedVariables[config.name] = String(config.value);
+                // Strategy 2: Direct binary object with binary property
+                else if (typeof value === 'object' && value !== null && value.binary) {
+                  binaryData = value.binary;
+                  fileName = binaryData.fileName || fileName;
+                  mimeType = binaryData.mimeType || mimeType;
+                }
+                // Strategy 3: Value is the entire binary object (e.g., {{ $binary }})
+                else if (typeof value === 'object' && value !== null && value.data) {
+                  binaryData = value;
+                  fileName = value.fileName || fileName;
+                  mimeType = value.mimeType || mimeType;
+                }
+                // Strategy 4: Value is binary.data (e.g., {{ $binary.data }})
+                else if (typeof value === 'object' && value !== null && value.data && value.data.data) {
+                  binaryData = value.data;
+                  fileName = value.data.fileName || fileName;
+                  mimeType = value.data.mimeType || mimeType;
+                }
+                // Strategy 5: Try to find any binary data in the item
+                else if (item.binary && Object.keys(item.binary).length > 0) {
+                  const firstBinaryKey = Object.keys(item.binary)[0];
+                  binaryData = item.binary[firstBinaryKey];
+                  fileName = binaryData.fileName || fileName;
+                  mimeType = binaryData.mimeType || mimeType;
+                }
+
+                if (binaryData && binaryData.data) {
+                  // Convert base64 to buffer
+                  const buffer = Buffer.from(binaryData.data, 'base64');
+                  const file = new File([buffer], fileName, { type: mimeType });
+
+                  // Upload file and get download URL
+                  const downloadUrl = await apiService.uploadFileAndGetDownloadUrl(file);
+
+                  processedVariables[name] = {
+                    file_url: downloadUrl
+                  };
+                } else {
+                  // Fallback: treat as string
+                  processedVariables[name] = String(value);
+                }
+              } catch (fileError) {
+                console.error(`Error processing file for variable ${name}:`, fileError);
+                // Fallback to string value
+                processedVariables[name] = String(value);
+              }
+            } else {
+              // Non-file variable, process as string
+              processedVariables[name] = String(value);
             }
           }
         }
       }
+
+      console.log(processedVariables)
 
       const data = await apiService.createCompletion({
         canvas_id: canvasId,
         variables: processedVariables,
       });
 
-      return [this.helpers.returnJsonArray(data)];
+      const content = data.choices[0].message?.content || {};
+      return [this.helpers.returnJsonArray(content)];
     } catch (error) {
       throw new Error(`Failed to execute canvas: ${error}`);
     }
