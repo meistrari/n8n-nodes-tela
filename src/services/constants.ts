@@ -4,4 +4,5 @@ export const TELA_API_ENDPOINTS = {
   PROJECTS: '/project',
   PROMPTS: '/prompt',
   COMPLETIONS: '/v2/chat/completions',
+  FILES: '/v2/file',
 } as const;

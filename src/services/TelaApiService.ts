@@ -1,4 +1,4 @@
-import { Project, PromptDefinition, CompletionRequest, CompletionResponse } from './types';
+import { Project, PromptDefinition, CompletionRequest, CompletionResponse, FileResponse } from './types';
 import { TELA_API_BASE_URL, TELA_API_ENDPOINTS } from './constants';
 
 export class TelaApiService {
@@ -17,7 +17,7 @@ export class TelaApiService {
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${TELA_API_BASE_URL}${endpoint}`;
-    
+
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -42,15 +42,41 @@ export class TelaApiService {
     return this.makeRequest<PromptDefinition[]>(endpoint);
   }
 
-  async getPromptById(promptId: string): Promise<PromptDefinition> {
-    const endpoint = `${TELA_API_ENDPOINTS.PROMPTS}/${promptId}?includeLastVersion=true`;
-    return this.makeRequest<PromptDefinition>(endpoint);
-  }
-
   async createCompletion(request: CompletionRequest): Promise<CompletionResponse> {
     return this.makeRequest<CompletionResponse>(TELA_API_ENDPOINTS.COMPLETIONS, {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  }
+
+  async createUploadUrl(): Promise<FileResponse> {
+    return this.makeRequest<FileResponse>(TELA_API_ENDPOINTS.FILES, {
+      method: 'POST'
+    });
+  }
+
+  async uploadFile(file: File, uploadUrl: string): Promise<void> {
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}, message: ${response.statusText}`);
+    }
+  }
+
+  async uploadFileAndGetDownloadUrl(file: File): Promise<string> {
+    // Create upload URL
+    const fileResponse = await this.createUploadUrl();
+
+    // Upload the file
+    await this.uploadFile(file, fileResponse.upload_url);
+
+    // Return the download URL
+    return fileResponse.download_url;
   }
 }

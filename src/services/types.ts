@@ -78,5 +78,20 @@ export interface CompletionRequest {
 }
 
 export interface CompletionResponse {
-  [key: string]: any;
+  id: string;
+  object: string;
+  created: number;
+  choices: {
+    message: {
+      role: string;
+      content: {
+        [key: string]: any;
+      };
+    };
+  }[];
+}
+
+export interface FileResponse {
+  upload_url: string;
+  download_url: string;
 }
