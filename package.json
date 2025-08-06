@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-tela",
+  "name": "@meistrari/n8n-nodes-tela",
   "version": "1.0.0",
   "description": "n8n community node for Tela API integration. Allows you to interact with Tela projects and canvases in your n8n workflows.",
   "main": "dist/index.js",
@@ -44,9 +44,12 @@
     "automation"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/meistrari/n8n-nodes-tela.git"
+    "url": "git+https://github.com/meistrari/n8n-nodes-tela.git"
   },
   "homepage": "https://github.com/meistrari/n8n-nodes-tela#readme",
   "bugs": {
