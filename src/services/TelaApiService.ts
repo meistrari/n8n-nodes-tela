@@ -70,13 +70,10 @@ export class TelaApiService {
   }
 
   async uploadFileAndGetDownloadUrl(file: File): Promise<string> {
-    // Create upload URL
     const fileResponse = await this.createUploadUrl();
 
-    // Upload the file
     await this.uploadFile(file, fileResponse.upload_url);
 
-    // Return the download URL
     return fileResponse.download_url;
   }
 }

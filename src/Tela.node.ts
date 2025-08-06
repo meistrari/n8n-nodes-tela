@@ -202,6 +202,95 @@ export class Tela implements INodeType {
     },
   };
 
+  private async getCanvasVariables(apiService: TelaApiService, projectId: string, canvasId: string): Promise<any[]> {
+    const prompts = await apiService.getPrompts(projectId);
+    const prompt = prompts.find(p => p.id === canvasId);
+    const canvasVariables = prompt?.lastVersion?.variables || [];
+    return canvasVariables;
+  }
+
+  private async processFileVariable(executeContext: IExecuteFunctions, value: any, apiService: TelaApiService): Promise<any> {
+    try {
+      const items = executeContext.getInputData();
+      const item = items[0];
+
+      let binaryData = null;
+      let fileName = 'file';
+      let mimeType = 'application/octet-stream';
+
+      if (typeof value === 'string' && item.binary && item.binary[value]) {
+        binaryData = item.binary[value];
+        fileName = binaryData.fileName || fileName;
+        mimeType = binaryData.mimeType || mimeType;
+      }
+      else if (typeof value === 'object' && value !== null && value.binary) {
+        binaryData = value.binary;
+        fileName = binaryData.fileName || fileName;
+        mimeType = binaryData.mimeType || mimeType;
+      }
+      else if (typeof value === 'object' && value !== null && value.data) {
+        binaryData = value;
+        fileName = value.fileName || fileName;
+        mimeType = value.mimeType || mimeType;
+      }
+      else if (typeof value === 'object' && value !== null && value.data && value.data.data) {
+        binaryData = value.data;
+        fileName = value.data.fileName || fileName;
+        mimeType = value.data.mimeType || mimeType;
+      }
+      else if (item.binary && Object.keys(item.binary).length > 0) {
+        const firstBinaryKey = Object.keys(item.binary)[0];
+        binaryData = item.binary[firstBinaryKey];
+        fileName = binaryData.fileName || fileName;
+        mimeType = binaryData.mimeType || mimeType;
+      }
+
+      if (binaryData && binaryData.data) {
+        const buffer = Buffer.from(binaryData.data, 'base64');
+        const file = new File([buffer], fileName, { type: mimeType });
+        const downloadUrl = await apiService.uploadFileAndGetDownloadUrl(file);
+        return { file_url: downloadUrl };
+      } else {
+        return String(value);
+      }
+    } catch (fileError) {
+      console.error(`Error processing file:`, fileError);
+      return String(value);
+    }
+  }
+
+  private async processVariables(executeContext: IExecuteFunctions, variablesCollection: any, canvasVariables: any[], apiService: TelaApiService): Promise<Record<string, any>> {
+    const processedVariables: Record<string, any> = {};
+
+    if (variablesCollection?.variableValues && Array.isArray(variablesCollection.variableValues)) {
+      for (const variableValue of variablesCollection.variableValues) {
+        const { name, value } = variableValue;
+
+        if (name && value !== undefined && value !== '') {
+          const variableDefinition = canvasVariables.find((v: any) => v.name === name);
+
+          if (variableDefinition?.type === 'file') {
+            processedVariables[name] = await this.processFileVariable(executeContext, value, apiService);
+          } else {
+            processedVariables[name] = String(value);
+          }
+        }
+      }
+    }
+
+    return processedVariables;
+  }
+
+  private async executeCanvasCompletion(executeContext: IExecuteFunctions, apiService: TelaApiService, canvasId: string, processedVariables: Record<string, any>): Promise<INodeExecutionData[][]> {
+    const data = await apiService.createCompletion({
+      canvas_id: canvasId,
+      variables: processedVariables,
+    });
+
+    const content = data.choices[0].message?.content || {};
+    return [executeContext.helpers.returnJsonArray(content)];
+  }
+
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const canvasId = this.getNodeParameter('canvasId', 0) as string;
     const projectId = this.getNodeParameter('projectId', 0) as string;
@@ -209,101 +298,16 @@ export class Tela implements INodeType {
     const credentials = await this.getCredentials('telaApi')
     const apiService = new TelaApiService(credentials.apiKey as string);
 
+    // Create an instance of the Tela class to access its methods
+    // This is necessary because the methods are defined in the class and not in the instance
+    // This is a workaround to allow the methods to be accessed by the execute function
+    const telaInstance = new Tela();
+
     try {
-      const prompts = await apiService.getPrompts(projectId);
-      const prompt = prompts.find(p => p.id === canvasId);
-      const canvasVariables = prompt?.lastVersion?.variables || [];
+      const canvasVariables = await telaInstance.getCanvasVariables(apiService, projectId, canvasId);
 
-      // Process variables from the fixedCollection
-      const processedVariables: Record<string, any> = {};
-
-      if (variablesCollection?.variableValues && Array.isArray(variablesCollection.variableValues)) {
-        for (const variableValue of variablesCollection.variableValues) {
-          const { name, value } = variableValue;
-
-          if (name && value !== undefined && value !== '') {
-            // Find the variable definition to determine how to process the value
-            const variableDefinition = canvasVariables.find((v: any) => v.name === name);
-
-            if (variableDefinition?.type === 'file') {
-              // Handle file upload
-              try {
-                // Get input data to access binary data
-                const items = this.getInputData();
-                const item = items[0]; // Get the first item
-
-                // Fallback strategy to extract binary data
-                let binaryData = null;
-                let fileName = 'file';
-                let mimeType = 'application/octet-stream';
-
-                // Strategy 1: Direct binary property name (e.g., "image")
-                if (typeof value === 'string' && item.binary && item.binary[value]) {
-                  binaryData = item.binary[value];
-                  fileName = binaryData.fileName || fileName;
-                  mimeType = binaryData.mimeType || mimeType;
-                }
-                // Strategy 2: Direct binary object with binary property
-                else if (typeof value === 'object' && value !== null && value.binary) {
-                  binaryData = value.binary;
-                  fileName = binaryData.fileName || fileName;
-                  mimeType = binaryData.mimeType || mimeType;
-                }
-                // Strategy 3: Value is the entire binary object (e.g., {{ $binary }})
-                else if (typeof value === 'object' && value !== null && value.data) {
-                  binaryData = value;
-                  fileName = value.fileName || fileName;
-                  mimeType = value.mimeType || mimeType;
-                }
-                // Strategy 4: Value is binary.data (e.g., {{ $binary.data }})
-                else if (typeof value === 'object' && value !== null && value.data && value.data.data) {
-                  binaryData = value.data;
-                  fileName = value.data.fileName || fileName;
-                  mimeType = value.data.mimeType || mimeType;
-                }
-                // Strategy 5: Try to find any binary data in the item
-                else if (item.binary && Object.keys(item.binary).length > 0) {
-                  const firstBinaryKey = Object.keys(item.binary)[0];
-                  binaryData = item.binary[firstBinaryKey];
-                  fileName = binaryData.fileName || fileName;
-                  mimeType = binaryData.mimeType || mimeType;
-                }
-
-                if (binaryData && binaryData.data) {
-                  // Convert base64 to buffer
-                  const buffer = Buffer.from(binaryData.data, 'base64');
-                  const file = new File([buffer], fileName, { type: mimeType });
-
-                  // Upload file and get download URL
-                  const downloadUrl = await apiService.uploadFileAndGetDownloadUrl(file);
-
-                  processedVariables[name] = {
-                    file_url: downloadUrl
-                  };
-                } else {
-                  // Fallback: treat as string
-                  processedVariables[name] = String(value);
-                }
-              } catch (fileError) {
-                console.error(`Error processing file for variable ${name}:`, fileError);
-                // Fallback to string value
-                processedVariables[name] = String(value);
-              }
-            } else {
-              // Non-file variable, process as string
-              processedVariables[name] = String(value);
-            }
-          }
-        }
-      }
-
-      const data = await apiService.createCompletion({
-        canvas_id: canvasId,
-        variables: processedVariables,
-      });
-
-      const content = data.choices[0].message?.content || {};
-      return [this.helpers.returnJsonArray(content)];
+      const processedVariables = await telaInstance.processVariables(this, variablesCollection, canvasVariables, apiService);
+      return await telaInstance.executeCanvasCompletion(this, apiService, canvasId, processedVariables);
     } catch (error) {
       throw new Error(`Failed to execute canvas: ${error}`);
     }
