@@ -1,6 +1,6 @@
 {
   "name": "@meistrari/n8n-nodes-tela",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "n8n community node for Tela API integration. Allows you to interact with Tela projects and canvases in your n8n workflows.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,20 +13,10 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "nodes": [
-      {
-        "name": "Tela",
-        "type": "n8n-nodes-tela.Tela",
-        "file": "dist/Tela.node.js",
-        "icon": "file:tela.png"
-      }
+      "dist/Tela.node.js"
     ],
     "credentials": [
-      {
-        "name": "telaApi",
-        "type": "n8n-nodes-tela.telaApi",
-        "file": "dist/Tela.credentials.js",
-        "icon": "file:tela.png"
-      }
+      "dist/Tela.credentials.js"
     ]
   },
   "files": [
