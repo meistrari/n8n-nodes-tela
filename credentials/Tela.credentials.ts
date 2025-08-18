@@ -17,21 +17,6 @@ export class Tela implements ICredentialType {
     },
   ];
 
-  // test: ICredentialTestRequest = {
-  // 		request: {
-  // 			baseURL: 'https://api.tavily.com',
-  // 			url: '/search',
-  // 			method: 'POST',
-  // 			headers: {
-  // 				Authorization: '=Bearer {{$credentials.apiKey}}',
-  // 				'X-Client-Source': 'n8n'
-  // 			},
-  // 			body: {
-  // 				query: 'Hello n8n!',
-  // 			},
-  // 		},
-  // 	};
-
   authenticate: IAuthenticateGeneric = {
     type: 'generic',
     properties: {
