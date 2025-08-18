@@ -266,6 +266,13 @@ npm run build && npm test
 
 ## Changelog
 
+### Version 1.0.2
+
+- Enhanced README documentation for n8n verification compliance
+- Added comprehensive usage examples and sample workflows
+- Improved installation and configuration instructions
+- Added troubleshooting guide and development documentation
+
 ### Version 1.0.1
 
 - Enhanced error handling
