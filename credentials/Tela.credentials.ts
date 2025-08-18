@@ -20,10 +20,10 @@ export class Tela implements ICredentialType {
   test: ICredentialTestRequest = {
     request: {
       baseURL: 'https://api.tela.com',
-      url: '/v1/projects',
+      url: '/project',
       method: 'GET',
       headers: {
-        'Authorization': 'Bearer={{ $credentials.apiKey }}',
+        'Authorization': 'Bearer {{ $credentials.apiKey }}',
         'Content-Type': 'application/json',
       },
     },
