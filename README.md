@@ -266,7 +266,7 @@ npm run build && npm test
 
 ## Changelog
 
-### Version 1.0.5
+### Version 1.0.6
 
 - Added credential test method to fix n8n verification pre-checks
 - Fixed n8n verification pre-checks by restructuring project to match n8n-nodes-starter template
