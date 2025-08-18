@@ -23,7 +23,7 @@ export class Tela implements ICredentialType {
       url: '/project',
       method: 'GET',
       headers: {
-        'Authorization': 'Bearer ={{ $credentials.apiKey }}',
+        'Authorization': 'Bearer {{ $credentials.apiKey }}',
         'Content-Type': 'application/json',
       },
     },
