@@ -62,8 +62,5 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
-  },
-  "dependencies": {
-    "@meistrari/n8n-nodes-tela": "^1.0.3"
   }
 }

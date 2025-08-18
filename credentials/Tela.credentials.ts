@@ -1,4 +1,4 @@
-import { IconFile, ICredentialType, INodeProperties } from "n8n-workflow";
+import { IconFile, ICredentialType, INodeProperties, ICredentialTestRequest } from "n8n-workflow";
 
 export class Tela implements ICredentialType {
   name = "telaApi";
@@ -15,4 +15,17 @@ export class Tela implements ICredentialType {
       required: true,
     },
   ];
+
+  // The block below tells how this credential can be tested
+  test: ICredentialTestRequest = {
+    request: {
+      baseURL: 'https://api.tela.com',
+      url: '/v1/projects',
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer={{ $credentials.apiKey }}',
+        'Content-Type': 'application/json',
+      },
+    },
+  };
 }
