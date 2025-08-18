@@ -266,7 +266,7 @@ npm run build && npm test
 
 ## Changelog
 
-### Version 1.0.3
+### Version 1.0.4
 
 - Fixed n8n verification pre-checks by restructuring project to match n8n-nodes-starter template
 - Moved credentials and nodes to proper directories as required by n8n
