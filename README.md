@@ -266,6 +266,14 @@ npm run build && npm test
 
 ## Changelog
 
+### Version 1.0.15
+
+- Fixed critical security vulnerabilities in transitive dependencies
+- Updated axios from vulnerable version to 1.12.2 (fixes CVE-2025-58754)
+- Updated form-data from vulnerable version to 4.0.4 (fixes CVE-2025-7783)
+- Added npm overrides to ensure secure dependency versions across all packages
+- Zero vulnerabilities reported by npm audit
+
 ### Version 1.0.14
 
 - Added credential test method to fix n8n verification pre-checks
