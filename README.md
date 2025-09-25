@@ -266,6 +266,10 @@ npm run build && npm test
 
 ## Changelog
 
+### Version 1.0.16
+
+- Replace get prompts call (includeLastVersion=true) for /promoted-version endpoint (the old one was deprecated internally)
+
 ### Version 1.0.15
 
 - Fixed critical security vulnerabilities in transitive dependencies
