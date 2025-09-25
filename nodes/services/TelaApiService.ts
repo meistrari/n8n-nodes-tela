@@ -1,4 +1,4 @@
-import { Project, PromptDefinition, CompletionRequest, CompletionResponse, FileResponse } from './types';
+import { Project, PromptDefinition, CompletionRequest, CompletionResponse, FileResponse, CanvasVariables } from './types';
 import { TELA_API_BASE_URL, TELA_API_ENDPOINTS } from './constants';
 
 export class TelaApiService {
@@ -40,6 +40,11 @@ export class TelaApiService {
   async getPrompts(projectId: string): Promise<PromptDefinition[]> {
     const endpoint = `${TELA_API_ENDPOINTS.PROMPTS}?projectId=${projectId}&includeStats=false&includeLastVersion=true`;
     return this.makeRequest<PromptDefinition[]>(endpoint);
+  }
+
+  async getCanvasVariables(canvasId: string): Promise<CanvasVariables> {
+    const endpoint = `${TELA_API_ENDPOINTS.PROMPTS}/${canvasId}/promoted-version`;
+    return this.makeRequest<CanvasVariables>(endpoint);
   }
 
   async createCompletion(request: CompletionRequest): Promise<CompletionResponse> {

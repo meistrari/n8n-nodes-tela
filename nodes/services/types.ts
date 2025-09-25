@@ -72,6 +72,12 @@ export interface PromptDefinition {
   lastVersion: LastVersion;
 }
 
+export interface CanvasVariables {
+  id: string;
+  promptId: string;
+  variables: Variable[];
+}
+
 export interface CompletionRequest {
   canvas_id: string;
   variables: Record<string, any>;

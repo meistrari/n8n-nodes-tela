@@ -172,8 +172,7 @@ export class Tela implements INodeType {
 
       async getCanvasVariables(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
         const canvasId = this.getCurrentNodeParameter('canvasId') as string;
-        const projectId = this.getCurrentNodeParameter('projectId') as string;
-        if (!canvasId || !projectId) {
+        if (!canvasId) {
           return [];
         }
 
@@ -181,9 +180,8 @@ export class Tela implements INodeType {
         const apiService = new TelaApiService(credentials.apiKey as string);
 
         try {
-          const prompts = await apiService.getPrompts(projectId);
-          const prompt = prompts.find(p => p.id === canvasId);
-          const variables = prompt?.lastVersion?.variables || [];
+          const canvasVariables = await apiService.getCanvasVariables(canvasId);
+          const variables = canvasVariables.variables || [];
 
           return variables.map(variable => {
             const requiredInfo = variable.required ? ' (required)' : '';
@@ -304,9 +302,10 @@ export class Tela implements INodeType {
     const telaInstance = new Tela();
 
     try {
-      const canvasVariables = await telaInstance.getCanvasVariables(apiService, projectId, canvasId);
+      const canvasVariables = await apiService.getCanvasVariables(canvasId);
+      const variables = canvasVariables.variables || [];
 
-      const processedVariables = await telaInstance.processVariables(this, variablesCollection, canvasVariables, apiService);
+      const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService);
       return await telaInstance.executeCanvasCompletion(this, apiService, canvasId, processedVariables);
     } catch (error) {
       throw new Error(`Failed to execute canvas: ${error}`);
