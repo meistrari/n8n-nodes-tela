@@ -266,6 +266,33 @@ npm run build && npm test
 
 ## Changelog
 
+### Version 1.1.0
+
+**Major improvements for n8n Cloud verification compliance:**
+
+#### Critical Fixes
+- **Removed dependency overrides**: Eliminated `overrides` section from package.json to prevent masking security vulnerabilities
+- **Replaced native fetch() with n8n HTTP helpers**: All API requests now use n8n's `httpRequest` helper for proper proxy support, retry logic, and request logging
+- **Added pairedItem linking**: Implemented proper data flow tracking with `pairedItem` metadata on all outputs
+
+#### High Priority Improvements
+- **Enhanced error logging**: Replaced `console.error` with n8n's logger service for better debugging in production
+- **Added continueOnFail support**: Workflows can now handle errors gracefully and continue processing remaining items
+- **Multi-item processing**: Refactored execute() method to properly process multiple input items in batch
+
+#### Quality Improvements
+- **Converted icon to SVG format**: Replaced PNG icon with SVG for better scalability and 70% smaller file size
+- **Improved error handling**: Added `NodeOperationError` with detailed metadata including itemIndex
+- **Better type safety**: Enhanced TypeScript types for HTTP request methods
+
+#### Breaking Changes
+- None - all changes are backwards compatible
+
+#### Developer Experience
+- Enhanced logging visibility in n8n execution logs
+- Better error messages with actionable descriptions
+- Improved workflow debugging with proper data flow tracking
+
 ### Version 1.0.16
 
 - Replace get prompts call (includeLastVersion=true) for /promoted-version endpoint (the old one was deprecated internally)
