@@ -252,7 +252,10 @@ export class Tela implements INodeType {
         return String(value);
       }
     } catch (fileError) {
-      console.error(`Error processing file:`, fileError);
+      executeContext.logger.error('Error processing file variable, falling back to string value', {
+        error: fileError instanceof Error ? fileError.message : String(fileError),
+        valueType: typeof value,
+      });
       return String(value);
     }
   }
