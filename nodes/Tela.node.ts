@@ -5,7 +5,8 @@ import {
   INodePropertyOptions,
   INodeType,
   INodeTypeDescription,
-  NodeConnectionType
+  NodeConnectionType,
+  NodeOperationError,
 } from 'n8n-workflow';
 
 import { TelaApiService } from './services/TelaApiService';
@@ -200,17 +201,10 @@ export class Tela implements INodeType {
     },
   };
 
-  private async getCanvasVariables(apiService: TelaApiService, projectId: string, canvasId: string): Promise<any[]> {
-    const prompts = await apiService.getPrompts(projectId);
-    const prompt = prompts.find(p => p.id === canvasId);
-    const canvasVariables = prompt?.lastVersion?.variables || [];
-    return canvasVariables;
-  }
-
-  private async processFileVariable(executeContext: IExecuteFunctions, value: any, apiService: TelaApiService): Promise<any> {
+  private async processFileVariable(executeContext: IExecuteFunctions, value: any, apiService: TelaApiService, itemIndex: number): Promise<any> {
     try {
       const items = executeContext.getInputData();
-      const item = items[0];
+      const item = items[itemIndex];
 
       let binaryData = null;
       let fileName = 'file';
@@ -260,7 +254,7 @@ export class Tela implements INodeType {
     }
   }
 
-  private async processVariables(executeContext: IExecuteFunctions, variablesCollection: any, canvasVariables: any[], apiService: TelaApiService): Promise<Record<string, any>> {
+  private async processVariables(executeContext: IExecuteFunctions, variablesCollection: any, canvasVariables: any[], apiService: TelaApiService, itemIndex: number): Promise<Record<string, any>> {
     const processedVariables: Record<string, any> = {};
 
     if (variablesCollection?.variableValues && Array.isArray(variablesCollection.variableValues)) {
@@ -271,7 +265,7 @@ export class Tela implements INodeType {
           const variableDefinition = canvasVariables.find((v: any) => v.name === name);
 
           if (variableDefinition?.type === 'file') {
-            processedVariables[name] = await this.processFileVariable(executeContext, value, apiService);
+            processedVariables[name] = await this.processFileVariable(executeContext, value, apiService, itemIndex);
           } else {
             processedVariables[name] = String(value);
           }
@@ -282,36 +276,64 @@ export class Tela implements INodeType {
     return processedVariables;
   }
 
-  private async executeCanvasCompletion(executeContext: IExecuteFunctions, apiService: TelaApiService, canvasId: string, processedVariables: Record<string, any>): Promise<INodeExecutionData[][]> {
-    const data = await apiService.createCompletion({
-      canvas_id: canvasId,
-      variables: processedVariables,
-    });
-
-    const content = data.choices[0].message?.content || {};
-    return [executeContext.helpers.returnJsonArray(content)];
-  }
-
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-    const canvasId = this.getNodeParameter('canvasId', 0) as string;
-    const projectId = this.getNodeParameter('projectId', 0) as string;
-    const variablesCollection = this.getNodeParameter('variables', 0) as any;
-    const credentials = await this.getCredentials('telaApi')
+    const items = this.getInputData();
+    const returnData: INodeExecutionData[] = [];
+    const credentials = await this.getCredentials('telaApi');
     const apiService = new TelaApiService(credentials.apiKey as string);
-
-    // Create an instance of the Tela class to access its methods
-    // This is necessary because the methods are defined in the class and not in the instance
-    // This is a workaround to allow the methods to be accessed by the execute function
     const telaInstance = new Tela();
 
-    try {
-      const canvasVariables = await apiService.getCanvasVariables(canvasId);
-      const variables = canvasVariables.variables || [];
+    // Process each input item
+    for (let i = 0; i < items.length; i++) {
+      try {
+        const canvasId = this.getNodeParameter('canvasId', i) as string;
+        const variablesCollection = this.getNodeParameter('variables', i) as any;
 
-      const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService);
-      return await telaInstance.executeCanvasCompletion(this, apiService, canvasId, processedVariables);
-    } catch (error) {
-      throw new Error(`Failed to execute canvas: ${error}`);
+        // Get canvas variables definition
+        const canvasVariables = await apiService.getCanvasVariables(canvasId);
+        const variables = canvasVariables.variables || [];
+
+        // Process variables for this item
+        const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService, i);
+
+        // Execute canvas completion
+        const data = await apiService.createCompletion({
+          canvas_id: canvasId,
+          variables: processedVariables,
+        });
+
+        const content = data.choices[0].message?.content || {};
+
+        // Add output with pairedItem linking
+        returnData.push({
+          json: content,
+          pairedItem: { item: i },
+        });
+
+      } catch (error) {
+        // Check if continueOnFail is enabled
+        if (this.continueOnFail()) {
+          returnData.push({
+            json: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+            pairedItem: { item: i },
+          });
+          continue;
+        }
+
+        // If continueOnFail is disabled, throw error
+        throw new NodeOperationError(
+          this.getNode(),
+          `Failed to execute canvas: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            itemIndex: i,
+            description: 'Enable "Continue On Fail" in node settings to skip failed items',
+          }
+        );
+      }
     }
+
+    return [returnData];
   }
 }
