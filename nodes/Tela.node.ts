@@ -15,7 +15,7 @@ export class Tela implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Tela',
     name: 'tela',
-    icon: 'file:tela.png',
+    icon: 'file:tela.svg',
     group: ['transform'],
     version: 1,
     description: 'Dynamic Tela API integration with auto-generated variable fields',
