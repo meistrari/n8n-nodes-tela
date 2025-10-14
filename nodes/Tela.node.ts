@@ -134,7 +134,7 @@ export class Tela implements INodeType {
     loadOptions: {
       async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
         const credentials = await this.getCredentials('telaApi')
-        const apiService = new TelaApiService(credentials.apiKey as string);
+        const apiService = new TelaApiService(credentials.apiKey as string, this.helpers.httpRequest);
 
         try {
           const projects = await apiService.getProjects();
@@ -156,7 +156,7 @@ export class Tela implements INodeType {
         }
 
         const credentials = await this.getCredentials('telaApi')
-        const apiService = new TelaApiService(credentials.apiKey as string);
+        const apiService = new TelaApiService(credentials.apiKey as string, this.helpers.httpRequest);
 
         try {
           const prompts = await apiService.getPrompts(projectId);
@@ -178,7 +178,7 @@ export class Tela implements INodeType {
         }
 
         const credentials = await this.getCredentials('telaApi')
-        const apiService = new TelaApiService(credentials.apiKey as string);
+        const apiService = new TelaApiService(credentials.apiKey as string, this.helpers.httpRequest);
 
         try {
           const canvasVariables = await apiService.getCanvasVariables(canvasId);
@@ -280,7 +280,7 @@ export class Tela implements INodeType {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
     const credentials = await this.getCredentials('telaApi');
-    const apiService = new TelaApiService(credentials.apiKey as string);
+    const apiService = new TelaApiService(credentials.apiKey as string, this.helpers.httpRequest);
     const telaInstance = new Tela();
 
     // Process each input item

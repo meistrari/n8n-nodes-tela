@@ -1,36 +1,31 @@
 import { Project, PromptDefinition, CompletionRequest, CompletionResponse, FileResponse, CanvasVariables } from './types';
 import { TELA_API_BASE_URL, TELA_API_ENDPOINTS } from './constants';
+import { IHttpRequestOptions, IHttpRequestMethods } from 'n8n-workflow';
 
 export class TelaApiService {
   private apiKey: string;
+  private httpRequest: (requestOptions: IHttpRequestOptions) => Promise<any>;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, httpRequest: (requestOptions: IHttpRequestOptions) => Promise<any>) {
     this.apiKey = apiKey;
+    this.httpRequest = httpRequest;
   }
 
-  private getHeaders(): Record<string, string> {
-    return {
-      'Authorization': `Bearer ${this.apiKey}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
-  private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options?: { method?: IHttpRequestMethods; body?: any }): Promise<T> {
     const url = `${TELA_API_BASE_URL}${endpoint}`;
 
-    const response = await fetch(url, {
-      ...options,
+    const response = await this.httpRequest({
+      method: options?.method || 'GET',
+      url,
       headers: {
-        ...this.getHeaders(),
-        ...options?.headers,
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: options?.body,
+      json: true,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}, message: ${response.statusText}`);
-    }
-
-    return response.json();
+    return response as T;
   }
 
   async getProjects(): Promise<Project[]> {
@@ -50,7 +45,7 @@ export class TelaApiService {
   async createCompletion(request: CompletionRequest): Promise<CompletionResponse> {
     return this.makeRequest<CompletionResponse>(TELA_API_ENDPOINTS.COMPLETIONS, {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: request,
     });
   }
 
