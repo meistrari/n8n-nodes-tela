@@ -33,11 +33,52 @@ export class Tela implements INodeType {
     ],
     properties: [
       {
+        displayName: 'Resource',
+        name: 'resource',
+        type: 'options',
+        noDataExpression: true,
+        options: [
+          {
+            name: 'Canvas',
+            value: 'canvas',
+          },
+        ],
+        default: 'canvas',
+        description: 'The resource to operate on',
+      },
+      {
+        displayName: 'Operation',
+        name: 'operation',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: {
+          show: {
+            resource: ['canvas'],
+          },
+        },
+        options: [
+          {
+            name: 'Execute',
+            value: 'execute',
+            description: 'Execute a canvas with variables',
+            action: 'Execute a canvas',
+          },
+        ],
+        default: 'execute',
+        description: 'The operation to perform',
+      },
+      {
         displayName: 'Project',
         name: 'projectId',
         type: 'options',
         typeOptions: {
           loadOptionsMethod: 'getProjects',
+        },
+        displayOptions: {
+          show: {
+            resource: ['canvas'],
+            operation: ['execute'],
+          },
         },
         default: '',
         required: true,
@@ -56,6 +97,8 @@ export class Tela implements INodeType {
         description: 'Select the canvas to execute',
         displayOptions: {
           show: {
+            resource: ['canvas'],
+            operation: ['execute'],
             projectId: [
               {
                 _cnd: {
@@ -78,6 +121,8 @@ export class Tela implements INodeType {
         description: 'Canvas variables - automatically populated based on selected canvas',
         displayOptions: {
           show: {
+            resource: ['canvas'],
+            operation: ['execute'],
             canvasId: [
               {
                 _cnd: {

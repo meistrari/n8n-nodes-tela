@@ -266,6 +266,31 @@ npm run build && npm test
 
 ## Changelog
 
+### Version 1.1.2
+
+**UX Pattern compliance for n8n verification:**
+
+#### n8n Verification Requirements
+- **Implemented Resources and Operations pattern**: Added standard n8n UX pattern with Resource and Operation dropdowns
+  - Resource: Canvas (single option, extensible for future resources)
+  - Operation: Execute (executes a canvas with variables)
+  - All existing functionality preserved and unchanged
+  - No breaking changes - workflows continue to work seamlessly
+
+#### User Experience Improvements
+- **Better discoverability**: Users can now see available resources and operations in dropdown menus
+- **Consistent with n8n ecosystem**: Follows the same UX pattern as official n8n nodes
+- **Future-proof architecture**: Easy to extend with additional operations (Get Details, List, etc.)
+
+#### Technical Details
+- Added `resource` property with 'canvas' option
+- Added `operation` property with 'execute' action
+- Updated all existing properties with `displayOptions` to show conditionally
+- Maintains backwards compatibility with existing workflows
+
+#### Breaking Changes
+- None - all changes are backwards compatible
+
 ### Version 1.1.0
 
 **Major improvements for n8n Cloud verification compliance:**
