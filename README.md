@@ -282,6 +282,9 @@ npm run build && npm test
 
 #### Quality Improvements
 - **Converted icon to SVG format**: Replaced PNG icon with SVG for better scalability and 70% smaller file size
+  - Updated both node and credential files to use `tela.svg`
+  - Removed legacy PNG icon from build output
+  - Consistent icon format across entire package
 - **Improved error handling**: Added `NodeOperationError` with detailed metadata including itemIndex
 - **Better type safety**: Enhanced TypeScript types for HTTP request methods
 

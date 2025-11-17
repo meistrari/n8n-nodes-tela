@@ -4,7 +4,7 @@ export class Tela implements ICredentialType {
   name = "telaApi";
   displayName = "Tela API";
   documentationUrl = "https://docs.tela.com";
-  icon = "file:tela.png" as IconFile;
+  icon = "file:tela.svg" as IconFile;
   properties: INodeProperties[] = [
     {
       displayName: "API Key",
