@@ -1,29 +1,32 @@
 import { Project, PromptDefinition, CompletionRequest, CompletionResponse, FileResponse, CanvasVariables } from './types';
 import { TELA_API_BASE_URL, TELA_API_ENDPOINTS } from './constants';
-import { IHttpRequestOptions, IHttpRequestMethods } from 'n8n-workflow';
+import { IHttpRequestMethods, IExecuteFunctions, ILoadOptionsFunctions } from 'n8n-workflow';
+
+type ExecutionContext = IExecuteFunctions | ILoadOptionsFunctions;
 
 export class TelaApiService {
-  private apiKey: string;
-  private httpRequest: (requestOptions: IHttpRequestOptions) => Promise<any>;
+  private context: ExecutionContext;
 
-  constructor(apiKey: string, httpRequest: (requestOptions: IHttpRequestOptions) => Promise<any>) {
-    this.apiKey = apiKey;
-    this.httpRequest = httpRequest;
+  constructor(context: ExecutionContext) {
+    this.context = context;
   }
 
   private async makeRequest<T>(endpoint: string, options?: { method?: IHttpRequestMethods; body?: any }): Promise<T> {
     const url = `${TELA_API_BASE_URL}${endpoint}`;
 
-    const response = await this.httpRequest({
-      method: options?.method || 'GET',
-      url,
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
+    const response = await this.context.helpers.httpRequestWithAuthentication.call(
+      this.context,
+      'telaApi',
+      {
+        method: options?.method || 'GET',
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: options?.body,
+        json: true,
       },
-      body: options?.body,
-      json: true,
-    });
+    );
 
     return response as T;
   }

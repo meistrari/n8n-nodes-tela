@@ -32,9 +32,6 @@ export class Tela implements ICredentialType {
       baseURL: 'https://api.tela.com',
       url: '/api-key',
       method: 'GET',
-      headers: {
-        Authorization: '=Bearer {{$credentials.apiKey}}',
-      },
     },
   };
 }
