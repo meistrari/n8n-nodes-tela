@@ -103,3 +103,14 @@ export interface FileResponse {
   upload_url: string;
   download_url: string;
 }
+
+export interface GetCompletionResponse {
+  id: string;
+  status: string;
+  outputContent: {
+    role: string;
+    content: {
+      [key: string]: any;
+    };
+  };
+}

@@ -63,6 +63,12 @@ export class Tela implements INodeType {
             description: 'Execute a canvas with variables',
             action: 'Execute a canvas',
           },
+          {
+            name: 'Get Completion',
+            value: 'getCompletion',
+            description: 'Get the result of an async completion',
+            action: 'Get completion status',
+          },
         ],
         default: 'execute',
         description: 'The operation to perform',
@@ -182,6 +188,20 @@ export class Tela implements INodeType {
           show: {
             resource: ['canvas'],
             operation: ['execute'],
+          },
+        },
+      },
+      {
+        displayName: 'Completion ID',
+        name: 'completionId',
+        type: 'string',
+        default: '',
+        required: true,
+        description: 'The ID of the async completion to retrieve',
+        displayOptions: {
+          show: {
+            resource: ['canvas'],
+            operation: ['getCompletion'],
           },
         },
       },
@@ -340,34 +360,64 @@ export class Tela implements INodeType {
     // Process each input item
     for (let i = 0; i < items.length; i++) {
       try {
-        const canvasId = this.getNodeParameter('canvasId', i) as string;
-        const variablesCollection = this.getNodeParameter('variables', i) as any;
-        const asyncExecution = this.getNodeParameter('async', i) as boolean;
+        const operation = this.getNodeParameter('operation', i) as string;
 
-        // Get canvas variables definition
-        const canvasVariables = await apiService.getCanvasVariables(canvasId);
-        const variables = canvasVariables.variables || [];
+        if (operation === 'getCompletion') {
+          const completionId = this.getNodeParameter('completionId', i) as string;
 
-        // Process variables for this item
-        const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService, i);
+          try {
+            const data = await apiService.getCompletion(completionId);
 
-        // Execute canvas completion
-        const data = await apiService.createCompletion({
-          canvas_id: canvasId,
-          variables: processedVariables,
-          ...(asyncExecution && { async: true }),
-        });
+            const output = data.status === 'succeeded'
+              ? { status: data.status, ...data.outputContent?.content }
+              : { status: data.status };
 
-        // Return only id and status for async execution, full content otherwise
-        const output = asyncExecution
-          ? { id: data.id, status: data.status }
-          : data.choices[0].message?.content || {};
+            returnData.push({
+              json: output,
+              pairedItem: { item: i },
+            });
+          } catch (getCompletionError: any) {
+            // Return error details for debugging
+            returnData.push({
+              json: {
+                status: 'error',
+                error: getCompletionError.message || String(getCompletionError),
+                completionId,
+              },
+              pairedItem: { item: i },
+            });
+          }
+        } else {
+          // execute operation
+          const canvasId = this.getNodeParameter('canvasId', i) as string;
+          const variablesCollection = this.getNodeParameter('variables', i) as any;
+          const asyncExecution = this.getNodeParameter('async', i) as boolean;
 
-        // Add output with pairedItem linking
-        returnData.push({
-          json: output,
-          pairedItem: { item: i },
-        });
+          // Get canvas variables definition
+          const canvasVariables = await apiService.getCanvasVariables(canvasId);
+          const variables = canvasVariables.variables || [];
+
+          // Process variables for this item
+          const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService, i);
+
+          // Execute canvas completion
+          const data = await apiService.createCompletion({
+            canvas_id: canvasId,
+            variables: processedVariables,
+            ...(asyncExecution && { async: true }),
+          });
+
+          // Return only id and status for async execution, full content otherwise
+          const output = asyncExecution
+            ? { id: data.id, status: data.status }
+            : data.choices[0].message?.content || {};
+
+          // Add output with pairedItem linking
+          returnData.push({
+            json: output,
+            pairedItem: { item: i },
+          });
+        }
 
       } catch (error) {
         // Check if continueOnFail is enabled
