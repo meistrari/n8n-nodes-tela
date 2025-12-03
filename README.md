@@ -74,6 +74,29 @@ The main operation that runs your Tela canvas with the specified variables and r
 - Process documents with AI assistance
 - Generate reports based on input data
 
+### Execute Workstation
+
+Create a task in the Tela Workstation dashboard. Tasks are visible in the Tela web interface and can be reviewed, approved, or processed manually.
+
+**Parameters:**
+
+| Field         | Type       | Required | Description                                       |
+| ------------- | ---------- | -------- | ------------------------------------------------- |
+| **Project**   | Options    | Yes      | Select the project containing your canvas         |
+| **Canvas**    | Options    | Yes      | Select the canvas to execute                      |
+| **Label**     | String     | No       | Optional label for the workstation task           |
+| **Variables** | Collection | No       | Dynamic fields based on your canvas configuration |
+
+**Response:**
+
+- Returns `{ status: "created" }` on success
+
+**Use Cases:**
+
+- Create tasks for human review in Tela dashboard
+- Queue AI-generated content for approval workflows
+- Build hybrid human-AI pipelines with manual checkpoints
+
 ### Get Completion
 
 Retrieve the result of an async canvas execution. Use this operation to poll for completion status when using async execution.
@@ -298,10 +321,16 @@ npm run build && npm test
 
 ### Version 1.2.0
 
-**New Features: Async Execution & Completion Polling**
+**New Features: Async Execution, Completion Polling & Workstation Integration**
 
 #### New Operations
-- **Get Completion**: New operation to retrieve the result of an async canvas execution
+- **Execute Workstation**: Create tasks in the Tela Workstation dashboard
+  - Tasks are visible in the Tela web interface for review and approval
+  - Supports optional `label` field for task identification
+  - Automatically fetches `application_id` from the canvas
+  - Returns `{ status: "created" }` on success
+
+- **Get Completion**: Retrieve the result of an async canvas execution
   - Accepts a `completionId` parameter
   - Returns `{ status, ...content }` when succeeded
   - Returns `{ status }` when still processing (for polling workflows)
@@ -321,10 +350,19 @@ npm run build && npm test
 5. [Continue] → Process the completed result
 ```
 
+#### Use Case: Workstation Task Creation
+```
+1. [Webhook] → Receive data from external system
+2. [Tela: Execute Workstation] → Create task with label "{{ $json.customer }} - {{ $json.orderId }}"
+3. [Task appears in Tela dashboard for human review]
+```
+
 #### Technical Details
 - Added `async` parameter to completion request body
 - Added `status` field to completion response types
 - New `GetCompletionResponse` type for get completion endpoint
+- New `PromptApplication` and `WorkstationRequest` types
+- New `/prompt-application` endpoint integration
 - Graceful error handling for polling requests
 
 ### Version 1.1.2
