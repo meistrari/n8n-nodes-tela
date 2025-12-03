@@ -58,12 +58,42 @@ For Docker installations, follow the [custom nodes guide](https://docs.n8n.io/in
 
 The main operation that runs your Tela canvas with the specified variables and returns the AI-generated results.
 
+**Parameters:**
+
+| Field              | Type    | Required | Description                                                                 |
+| ------------------ | ------- | -------- | --------------------------------------------------------------------------- |
+| **Project**        | Options | Yes      | Select the project containing your canvas                                   |
+| **Canvas**         | Options | Yes      | Select the canvas to execute                                                |
+| **Variables**      | Collection | No    | Dynamic fields based on your canvas configuration                           |
+| **Async Execution** | Boolean | No      | When enabled, returns immediately with completion ID instead of waiting     |
+
 **Use Cases:**
 
 - Generate dynamic content for emails
 - Create personalized marketing materials
 - Process documents with AI assistance
 - Generate reports based on input data
+
+### Get Completion
+
+Retrieve the result of an async canvas execution. Use this operation to poll for completion status when using async execution.
+
+**Parameters:**
+
+| Field            | Type   | Required | Description                              |
+| ---------------- | ------ | -------- | ---------------------------------------- |
+| **Completion ID** | String | Yes      | The ID returned from async execution     |
+
+**Response:**
+
+- If `status === 'succeeded'`: Returns `{ status: "succeeded", ...outputContent }`
+- If `status !== 'succeeded'`: Returns `{ status: "pending" }` (or current status)
+
+**Use Cases:**
+
+- Poll for long-running canvas executions
+- Build async workflows with wait loops
+- Handle high-latency AI processing without timeouts
 
 ## Node Reference
 
@@ -265,6 +295,37 @@ npm run build && npm test
 ```
 
 ## Changelog
+
+### Version 1.2.0
+
+**New Features: Async Execution & Completion Polling**
+
+#### New Operations
+- **Get Completion**: New operation to retrieve the result of an async canvas execution
+  - Accepts a `completionId` parameter
+  - Returns `{ status, ...content }` when succeeded
+  - Returns `{ status }` when still processing (for polling workflows)
+
+#### Execute Canvas Enhancements
+- **Async Execution**: New toggle to execute canvases asynchronously
+  - When enabled, returns immediately with `{ id, status }` instead of waiting for completion
+  - Ideal for long-running AI tasks that may exceed timeout limits
+  - Enables building polling workflows with Wait + If nodes
+
+#### Use Case: Async Workflow Pattern
+```
+1. [Tela: Execute Canvas] (Async: ON) → { id: "abc-123", status: "pending" }
+2. [Wait] → 5 seconds
+3. [Tela: Get Completion] (ID: {{ $json.id }}) → { status: "pending" } or { status: "succeeded", ...content }
+4. [If] status !== "succeeded" → Loop back to step 2
+5. [Continue] → Process the completed result
+```
+
+#### Technical Details
+- Added `async` parameter to completion request body
+- Added `status` field to completion response types
+- New `GetCompletionResponse` type for get completion endpoint
+- Graceful error handling for polling requests
 
 ### Version 1.1.2
 
