@@ -1,4 +1,4 @@
-import { Project, PromptDefinition, CompletionRequest, CompletionResponse, FileResponse, CanvasVariables, GetCompletionResponse } from './types';
+import { Project, PromptDefinition, CompletionRequest, CompletionResponse, FileResponse, CanvasVariables, GetCompletionResponse, PromptApplication, WorkstationRequest } from './types';
 import { TELA_API_BASE_URL, TELA_API_ENDPOINTS } from './constants';
 import { IHttpRequestMethods, IExecuteFunctions, ILoadOptionsFunctions } from 'n8n-workflow';
 
@@ -55,6 +55,18 @@ export class TelaApiService {
   async getCompletion(completionId: string): Promise<GetCompletionResponse> {
     const endpoint = `${TELA_API_ENDPOINTS.COMPLETIONS}/${completionId}`;
     return this.makeRequest<GetCompletionResponse>(endpoint);
+  }
+
+  async getPromptApplication(promptId: string): Promise<PromptApplication[]> {
+    const endpoint = `${TELA_API_ENDPOINTS.PROMPT_APPLICATION}?promptId=${promptId}`;
+    return this.makeRequest<PromptApplication[]>(endpoint);
+  }
+
+  async createWorkstationTask(request: WorkstationRequest): Promise<void> {
+    await this.makeRequest<void>(TELA_API_ENDPOINTS.COMPLETIONS, {
+      method: 'POST',
+      body: request,
+    });
   }
 
   async createUploadUrl(): Promise<FileResponse> {

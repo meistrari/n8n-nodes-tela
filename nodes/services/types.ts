@@ -114,3 +114,16 @@ export interface GetCompletionResponse {
     };
   };
 }
+
+export interface PromptApplication {
+  id: string;
+  key: string;
+  title: string;
+  promptId: string;
+}
+
+export interface WorkstationRequest {
+  application_id: string;
+  variables: Record<string, any>;
+  label?: string;
+}

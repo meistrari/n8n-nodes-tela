@@ -64,6 +64,12 @@ export class Tela implements INodeType {
             action: 'Execute a canvas',
           },
           {
+            name: 'Execute Workstation',
+            value: 'executeWorkstation',
+            description: 'Create a task in the workstation dashboard',
+            action: 'Execute workstation task',
+          },
+          {
             name: 'Get Completion',
             value: 'getCompletion',
             description: 'Get the result of an async completion',
@@ -83,7 +89,7 @@ export class Tela implements INodeType {
         displayOptions: {
           show: {
             resource: ['canvas'],
-            operation: ['execute'],
+            operation: ['execute', 'executeWorkstation'],
           },
         },
         default: '',
@@ -104,8 +110,28 @@ export class Tela implements INodeType {
         displayOptions: {
           show: {
             resource: ['canvas'],
-            operation: ['execute'],
+            operation: ['execute', 'executeWorkstation'],
             projectId: [
+              {
+                _cnd: {
+                  exists: true,
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        displayName: 'Label',
+        name: 'label',
+        type: 'string',
+        default: '',
+        description: 'Optional label for the workstation task',
+        displayOptions: {
+          show: {
+            resource: ['canvas'],
+            operation: ['executeWorkstation'],
+            canvasId: [
               {
                 _cnd: {
                   exists: true,
@@ -128,7 +154,7 @@ export class Tela implements INodeType {
         displayOptions: {
           show: {
             resource: ['canvas'],
-            operation: ['execute'],
+            operation: ['execute', 'executeWorkstation'],
             canvasId: [
               {
                 _cnd: {
@@ -387,6 +413,36 @@ export class Tela implements INodeType {
               pairedItem: { item: i },
             });
           }
+        } else if (operation === 'executeWorkstation') {
+          const canvasId = this.getNodeParameter('canvasId', i) as string;
+          const variablesCollection = this.getNodeParameter('variables', i) as any;
+          const label = this.getNodeParameter('label', i) as string;
+
+          // Get application_id from prompt-application endpoint
+          const promptApplications = await apiService.getPromptApplication(canvasId);
+          if (!promptApplications || promptApplications.length === 0) {
+            throw new Error(`No workstation application found for canvas ${canvasId}`);
+          }
+          const applicationId = promptApplications[0].id;
+
+          // Get canvas variables definition
+          const canvasVariables = await apiService.getCanvasVariables(canvasId);
+          const variables = canvasVariables.variables || [];
+
+          // Process variables for this item
+          const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService, i);
+
+          // Create workstation task
+          await apiService.createWorkstationTask({
+            application_id: applicationId,
+            variables: processedVariables,
+            ...(label && { label }),
+          });
+
+          returnData.push({
+            json: { status: 'created' },
+            pairedItem: { item: i },
+          });
         } else {
           // execute operation
           const canvasId = this.getNodeParameter('canvasId', i) as string;
