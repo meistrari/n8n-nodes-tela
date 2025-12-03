@@ -18,7 +18,7 @@ export class Tela implements INodeType {
     icon: 'file:tela.svg',
     group: ['transform'],
     version: 1,
-    description: 'Dynamic Tela API integration with auto-generated variable fields',
+    description: 'Integrates with Tela to run AI-driven workflows and automation tasks',
     defaults: {
       name: 'Tela',
       color: '#772244',
