@@ -172,6 +172,19 @@ export class Tela implements INodeType {
           },
         ],
       },
+      {
+        displayName: 'Async Execution',
+        name: 'async',
+        type: 'boolean',
+        default: false,
+        description: 'When enabled, the request returns immediately with the completion ID and status instead of waiting for the result',
+        displayOptions: {
+          show: {
+            resource: ['canvas'],
+            operation: ['execute'],
+          },
+        },
+      },
     ],
   };
 
@@ -329,6 +342,7 @@ export class Tela implements INodeType {
       try {
         const canvasId = this.getNodeParameter('canvasId', i) as string;
         const variablesCollection = this.getNodeParameter('variables', i) as any;
+        const asyncExecution = this.getNodeParameter('async', i) as boolean;
 
         // Get canvas variables definition
         const canvasVariables = await apiService.getCanvasVariables(canvasId);
@@ -341,13 +355,17 @@ export class Tela implements INodeType {
         const data = await apiService.createCompletion({
           canvas_id: canvasId,
           variables: processedVariables,
+          ...(asyncExecution && { async: true }),
         });
 
-        const content = data.choices[0].message?.content || {};
+        // Return only id and status for async execution, full content otherwise
+        const output = asyncExecution
+          ? { id: data.id, status: data.status }
+          : data.choices[0].message?.content || {};
 
         // Add output with pairedItem linking
         returnData.push({
-          json: content,
+          json: output,
           pairedItem: { item: i },
         });
 

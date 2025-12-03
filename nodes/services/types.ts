@@ -81,12 +81,14 @@ export interface CanvasVariables {
 export interface CompletionRequest {
   canvas_id: string;
   variables: Record<string, any>;
+  async?: boolean;
 }
 
 export interface CompletionResponse {
   id: string;
   object: string;
   created: number;
+  status?: string;
   choices: {
     message: {
       role: string;
