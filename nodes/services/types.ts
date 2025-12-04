@@ -85,6 +85,7 @@ export interface CompletionRequest {
 }
 
 export interface CompletionResponse {
+  [key: string]: any;
   id: string;
   object: string;
   created: number;
@@ -105,6 +106,7 @@ export interface FileResponse {
 }
 
 export interface GetCompletionResponse {
+  [key: string]: any;
   id: string;
   status: string;
   outputContent: {

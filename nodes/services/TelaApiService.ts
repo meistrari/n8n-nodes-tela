@@ -62,8 +62,8 @@ export class TelaApiService {
     return this.makeRequest<PromptApplication[]>(endpoint);
   }
 
-  async createWorkstationTask(request: WorkstationRequest): Promise<void> {
-    await this.makeRequest<void>(TELA_API_ENDPOINTS.COMPLETIONS, {
+  async createWorkstationTask(request: WorkstationRequest): Promise<CompletionResponse> {
+    return this.makeRequest<CompletionResponse>(TELA_API_ENDPOINTS.COMPLETIONS, {
       method: 'POST',
       body: request,
     });

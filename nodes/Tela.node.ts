@@ -390,29 +390,12 @@ export class Tela implements INodeType {
 
         if (operation === 'getCompletion') {
           const completionId = this.getNodeParameter('completionId', i) as string;
+          const data = await apiService.getCompletion(completionId);
 
-          try {
-            const data = await apiService.getCompletion(completionId);
-
-            const output = data.status === 'succeeded'
-              ? { status: data.status, ...data.outputContent?.content }
-              : { status: data.status };
-
-            returnData.push({
-              json: output,
-              pairedItem: { item: i },
-            });
-          } catch (getCompletionError: any) {
-            // Return error details for debugging
-            returnData.push({
-              json: {
-                status: 'error',
-                error: getCompletionError.message || String(getCompletionError),
-                completionId,
-              },
-              pairedItem: { item: i },
-            });
-          }
+          returnData.push({
+            json: data,
+            pairedItem: { item: i },
+          });
         } else if (operation === 'executeWorkstation') {
           const canvasId = this.getNodeParameter('canvasId', i) as string;
           const variablesCollection = this.getNodeParameter('variables', i) as any;
@@ -433,14 +416,14 @@ export class Tela implements INodeType {
           const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService, i);
 
           // Create workstation task
-          await apiService.createWorkstationTask({
+          const data = await apiService.createWorkstationTask({
             application_id: applicationId,
             variables: processedVariables,
             ...(label && { label }),
           });
 
           returnData.push({
-            json: { status: 'created' },
+            json: data,
             pairedItem: { item: i },
           });
         } else {
@@ -463,14 +446,8 @@ export class Tela implements INodeType {
             ...(asyncExecution && { async: true }),
           });
 
-          // Return only id and status for async execution, full content otherwise
-          const output = asyncExecution
-            ? { id: data.id, status: data.status }
-            : data.choices[0].message?.content || {};
-
-          // Add output with pairedItem linking
           returnData.push({
-            json: output,
+            json: data,
             pairedItem: { item: i },
           });
         }

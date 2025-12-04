@@ -89,7 +89,7 @@ Create a task in the Tela Workstation dashboard. Tasks are visible in the Tela w
 
 **Response:**
 
-- Returns `{ status: "created" }` on success
+- Returns the full API response object
 
 **Use Cases:**
 
@@ -109,8 +109,7 @@ Retrieve the result of an async canvas execution. Use this operation to poll for
 
 **Response:**
 
-- If `status === 'succeeded'`: Returns `{ status: "succeeded", ...outputContent }`
-- If `status !== 'succeeded'`: Returns `{ status: "pending" }` (or current status)
+- Returns the full API response object with `id`, `status`, and `outputContent`
 
 **Use Cases:**
 
@@ -318,6 +317,51 @@ npm run build && npm test
 ```
 
 ## Changelog
+
+### Version 1.4.0
+
+**BREAKING CHANGE: Simplified API Response Handling**
+
+All operations now return the raw API response directly instead of formatted/transformed data.
+
+#### Breaking Changes
+
+- **Execute Canvas**: Now returns the full `CompletionResponse` object from the API
+  - Before: `data.choices[0].message?.content` (sync) or `{ id, status }` (async)
+  - After: Full API response object
+
+- **Execute Workstation**: Now returns the full API response
+  - Before: `{ status: "created" }`
+  - After: Full `CompletionResponse` object from the API
+
+- **Get Completion**: Now returns the full API response
+  - Before: `{ status, ...outputContent }` (succeeded) or `{ status }` (pending)
+  - After: Full `GetCompletionResponse` object with `id`, `status`, and `outputContent`
+
+#### Migration Guide
+
+If your workflows depend on the previous response format, you'll need to update your expressions:
+
+```
+# Execute Canvas (sync) - accessing content
+Before: {{ $json.fieldName }}
+After:  {{ $json.choices[0].message.content.fieldName }}
+
+# Execute Canvas (async) - accessing id/status
+Before: {{ $json.id }}
+After:  {{ $json.id }}  (no change needed)
+
+# Get Completion - accessing output content
+Before: {{ $json.fieldName }}
+After:  {{ $json.outputContent.content.fieldName }}
+```
+
+#### Why This Change?
+
+- Provides full API response data for advanced use cases
+- Eliminates data loss from response transformation
+- Gives users complete control over how to process the response
+- Simplifies codebase maintenance
 
 ### Version 1.2.0
 
