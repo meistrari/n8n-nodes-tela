@@ -302,74 +302,82 @@ export class Tela implements INodeType {
     },
   };
 
-  private async processFileVariable(executeContext: IExecuteFunctions, value: any, apiService: TelaApiService, itemIndex: number): Promise<any> {
+  private async processVariableValue(
+    executeContext: IExecuteFunctions,
+    value: any,
+    apiService: TelaApiService,
+    itemIndex: number,
+  ): Promise<any> {
     try {
       const items = executeContext.getInputData();
       const item = items[itemIndex];
 
-      let binaryData = null;
+      let buffer: Buffer | null = null;
       let fileName = 'file';
       let mimeType = 'application/octet-stream';
 
-      if (typeof value === 'string' && item.binary && item.binary[value]) {
-        binaryData = item.binary[value];
-        fileName = binaryData.fileName || fileName;
-        mimeType = binaryData.mimeType || mimeType;
+      // Case 1: String with binary field name (e.g., "data", "file")
+      // Uses n8n's official helper
+      if (typeof value === 'string' && item.binary?.[value]) {
+        const binaryMeta = item.binary[value];
+        fileName = binaryMeta.fileName || fileName;
+        mimeType = binaryMeta.mimeType || mimeType;
+        buffer = await executeContext.helpers.getBinaryDataBuffer(itemIndex, value);
       }
-      else if (typeof value === 'object' && value !== null && value.binary) {
-        binaryData = value.binary;
-        fileName = binaryData.fileName || fileName;
-        mimeType = binaryData.mimeType || mimeType;
-      }
-      else if (typeof value === 'object' && value !== null && value.data) {
-        binaryData = value;
+      // Case 2: Binary object passed directly (e.g., {{ $binary.data }})
+      // Already in memory, no need for helper
+      else if (typeof value === 'object' && value?.data && typeof value.data === 'string') {
         fileName = value.fileName || fileName;
         mimeType = value.mimeType || mimeType;
+        buffer = Buffer.from(value.data, 'base64');
       }
-      else if (typeof value === 'object' && value !== null && value.data && value.data.data) {
-        binaryData = value.data;
-        fileName = value.data.fileName || fileName;
-        mimeType = value.data.mimeType || mimeType;
-      }
-      else if (item.binary && Object.keys(item.binary).length > 0) {
-        const firstBinaryKey = Object.keys(item.binary)[0];
-        binaryData = item.binary[firstBinaryKey];
-        fileName = binaryData.fileName || fileName;
-        mimeType = binaryData.mimeType || mimeType;
+      // Case 3: Fallback - uses first available binary field (when value is not a useful string)
+      else if (item.binary && Object.keys(item.binary).length > 0 && (value === '' || value === undefined || value === null)) {
+        const binaryPropertyName = Object.keys(item.binary)[0];
+        const binaryMeta = item.binary[binaryPropertyName];
+        fileName = binaryMeta.fileName || fileName;
+        mimeType = binaryMeta.mimeType || mimeType;
+        buffer = await executeContext.helpers.getBinaryDataBuffer(itemIndex, binaryPropertyName);
       }
 
-      if (binaryData && binaryData.data) {
-        const buffer = Buffer.from(binaryData.data, 'base64');
+      // If binary data was found, upload it
+      if (buffer) {
         const file = new File([buffer], fileName, { type: mimeType });
         const downloadUrl = await apiService.uploadFileAndGetDownloadUrl(file);
         return { file_url: downloadUrl };
-      } else {
-        return String(value);
       }
-    } catch (fileError) {
-      executeContext.logger.error('Error processing file variable, falling back to string value', {
-        error: fileError instanceof Error ? fileError.message : String(fileError),
+
+      // No binary data, return as string
+      return String(value);
+    } catch (error) {
+      executeContext.logger.error('Error processing variable value, falling back to string', {
+        error: error instanceof Error ? error.message : String(error),
         valueType: typeof value,
       });
       return String(value);
     }
   }
 
-  private async processVariables(executeContext: IExecuteFunctions, variablesCollection: any, canvasVariables: any[], apiService: TelaApiService, itemIndex: number): Promise<Record<string, any>> {
+  private async processVariables(
+    executeContext: IExecuteFunctions,
+    variablesCollection: any,
+    apiService: TelaApiService,
+    itemIndex: number,
+  ): Promise<Record<string, any>> {
     const processedVariables: Record<string, any> = {};
 
     if (variablesCollection?.variableValues && Array.isArray(variablesCollection.variableValues)) {
       for (const variableValue of variablesCollection.variableValues) {
         const { name, value } = variableValue;
 
-        if (name && value !== undefined && value !== '') {
-          const variableDefinition = canvasVariables.find((v: any) => v.name === name);
-
-          if (variableDefinition?.type === 'file') {
-            processedVariables[name] = await this.processFileVariable(executeContext, value, apiService, itemIndex);
-          } else {
-            processedVariables[name] = String(value);
-          }
+        if (name) {
+          // Always tries to process as binary first, falls back to string
+          processedVariables[name] = await this.processVariableValue(
+            executeContext,
+            value,
+            apiService,
+            itemIndex,
+          );
         }
       }
     }
@@ -408,12 +416,8 @@ export class Tela implements INodeType {
           }
           const applicationId = promptApplications[0].id;
 
-          // Get canvas variables definition
-          const canvasVariables = await apiService.getCanvasVariables(canvasId);
-          const variables = canvasVariables.variables || [];
-
           // Process variables for this item
-          const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService, i);
+          const processedVariables = await telaInstance.processVariables(this, variablesCollection, apiService, i);
 
           // Create workstation task
           const data = await apiService.createWorkstationTask({
@@ -432,12 +436,8 @@ export class Tela implements INodeType {
           const variablesCollection = this.getNodeParameter('variables', i) as any;
           const asyncExecution = this.getNodeParameter('async', i) as boolean;
 
-          // Get canvas variables definition
-          const canvasVariables = await apiService.getCanvasVariables(canvasId);
-          const variables = canvasVariables.variables || [];
-
           // Process variables for this item
-          const processedVariables = await telaInstance.processVariables(this, variablesCollection, variables, apiService, i);
+          const processedVariables = await telaInstance.processVariables(this, variablesCollection, apiService, i);
 
           // Execute canvas completion
           const data = await apiService.createCompletion({

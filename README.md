@@ -318,6 +318,25 @@ npm run build && npm test
 
 ## Changelog
 
+### Version 1.5.0
+
+**Improved Binary File Handling**
+
+#### Improvements
+
+- **Uses n8n's official helper**: Now uses `helpers.getBinaryDataBuffer()` instead of directly accessing binary data, which works correctly in all n8n storage modes (memory, filesystem, S3)
+- **Any variable can receive files**: Removed type validation - binary files can now be sent to any canvas variable, not just `file` type variables. Tela will automatically parse text content from files when needed
+- **Simplified binary detection**: Cleaner logic with 3 clear cases:
+  1. String with binary field name (e.g., `"data"`)
+  2. Binary object passed directly (e.g., `{{ $binary.data }}`)
+  3. Fallback to first available binary when value is empty
+- **Removed unnecessary API call**: No longer fetches canvas variable definitions just to check types
+
+#### Migration Guide
+
+No breaking changes - all existing workflows continue to work. The only difference is:
+- Variables with `type: text` can now receive binary files (previously only `type: file` variables could)
+
 ### Version 1.4.0
 
 **BREAKING CHANGE: Simplified API Response Handling**
